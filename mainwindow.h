@@ -4,6 +4,9 @@
 #include <QMainWindow>
 #include <QtGui>
 #include <QGraphicsScene>
+#include <complex>
+
+typedef std::complex<double> complex;
 
 namespace Ui {
 class MainWindow;
@@ -22,13 +25,18 @@ private slots:
 
     void bound_cond();
 
+	void on_pushButton_2_clicked();
+
+
+
 private:
+	complex secderivative(complex a, complex b, complex c, complex delta);
     Ui::MainWindow *ui;
     QGraphicsScene * mScene;
     double mCounter;
 //    bool mFlag;
-    double **cur;
-    double **next;
+	complex cur[100][100];
+	complex next[100][100];
     double  Xmin;
     double  Xmax;
     double  Ymin;
