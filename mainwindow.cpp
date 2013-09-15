@@ -24,13 +24,32 @@ MainWindow::MainWindow(QWidget *parent) :
 	ui->setupUi(this);
 
 	ui->graphicsView->setScene(mScene);
-	Nx = 100;
-	Ny = 100;
+
+	mScene2 = new QGraphicsScene;
+	ui->graphicsView_2->setScene(mScene2);
+	mScene2->setSceneRect(0, 0, 10, 600);
+	double Mas[600];
+	qreal a1 = 4.0/600.0;
+	Mas[0] = -1.0;
+
+	for (int g = 1; g < 600; g++) {
+		Mas[g] = Mas[g-1] +a1;
+	}
+
+	for (int g = 0; g < 600; g++) {
+		QColor qwe = color_int5(Mas[g]);
+		mScene2->addRect(0,(600 - g), 10, 1, QPen(qwe), QBrush(qwe));
+	}
+	ui->graphicsView_2->show();
+
+
+	Nx = 200;
+	Ny = 200;
 	int desk_size = Nx;
-	mScene->setSceneRect(0, 0, 400, 400);
+	mScene->setSceneRect(0, 0, 600, 600);
 
 	int i,x,y;
-
+	isOpen = true;
 
 	for (x = 0; x < desk_size; x++)
 	{
@@ -47,6 +66,7 @@ MainWindow::MainWindow(QWidget *parent) :
 	Tmax = 10;
 	Tstep = 0.01;
 	SAVE_STEP = 10;
+	mMaxi = 0;
 }
 
 MainWindow::~MainWindow()
@@ -55,7 +75,7 @@ MainWindow::~MainWindow()
 }
 
 
-int color_int(double x)
+int MainWindow::color_int(double x)
 {
 
     if (x == 1){return 255;}
@@ -63,7 +83,7 @@ int color_int(double x)
     return floor(x/step);
 }
 
-int color_int2(double x)
+int MainWindow::color_int2(double x)
 {
 
 	if (x > 20){return 255;}
@@ -73,7 +93,56 @@ int color_int2(double x)
     return floor(x/step);
 }
 
-void print (double ** board)
+int MainWindow::color_int3(double x)
+{
+	if (abs(x) > abs(mMaxi)) {
+		mMaxi = x;
+	}
+	double step = mMaxi*2/256;
+
+	x+=mMaxi;
+
+    return floor(x/step);
+}
+
+QColor MainWindow::color_int5(double x)
+{
+	int r = 0, g = 0, b = 0;
+	if (x<-1) x = -1;
+	if (x>4) {
+		x =4;
+		return  QColor(255, 255, 255);
+	}
+	x+=1;
+	qreal step = 0.00390625;
+	if ((x >= 0) && (x < 1)) {
+		b = floor(x/step);
+		return  QColor(r, g, b);
+	} else if ((x >= 1) && (x < 2)) {
+		x-=1;
+		g = floor(x/step);
+		b = 255 - floor(x/step);
+		return  QColor(r, g, b);
+	} else if ((x >= 2) && (x < 3)) {
+		x-=2;
+		r = floor(x/step);
+		g = 255 - floor(x/step);
+		return  QColor(r, g, b);
+	} else if ((x >= 3) && (x < 4)) {
+		x-=3;
+		r = 255;
+		g = floor(x/step);
+		b = floor(x/step);
+		return  QColor(r, g, b);
+	}
+
+
+
+
+	return floor(x/step);
+}
+
+void MainWindow::print (double ** board)
 {
     int i;
     int j;
@@ -91,13 +160,13 @@ void MainWindow::bound_cond()
 {
     for (int x = 0; x < Nx; x++)
     {
-        cur[x][0]  = 0;
-        cur[x][Ny-1] = 0;
+        next[x][0]  = 0;
+        next[x][Ny-1] = 0;
     }
     for (int y = 0; y < Ny; y++)
     {
-        cur[0][y]  = 1;
-        cur[Nx-1][y] = 0;
+        next[0][y]  = 1;
+        next[Nx-1][y] = 0;
     }
     return;
 }
@@ -105,106 +174,180 @@ void MainWindow::bound_cond()
 
 void MainWindow::on_pushButton_clicked()
 {
+
+
 	//    hx = (Xmax-Xmin)/Nx;
 	//    hy = (Ymax-Ymin)/Ny;
 	hx = 0.5; hy = 0.5;
 	//bound_cond();
 
-	int cell = 4;
-	int count = 0;
+	qreal cell = 3;
 
-	double t = 0;
+
+	qreal t = 5;
 	int step = 0;
 
-	complex  A( 2,0);
-	complex x0( 2,0);
+	complex  A( 1,0);
+	complex x0( 0,0);
 	complex sigm( 2,0);
-	complex kx( 2,0);
-	complex  U( 2,0);
-	qreal alpha = 2;
+	complex kx( 1,0);
+	complex  U( 0,0);
+	qreal alpha = 0;
 	complex i1(0, 1);
 
 	complex deltax(1,0);
+	complex deltat(1,0);
 
-	for (int i = 0; i < Nx; i++)
+	mScene->clear();
+	complex masX[Nx];
+
+
+	qreal nX = Nx;
+	qreal nY = Ny;
+
+	complex a = -40;
+	complex b = 40;
+    deltax = (b-a)/(complex(nX,0));
+	deltat = complex(t/nY,0);
+    x0 = (b+a)/2.0;
+	//x0 = -30;
+
+	a     = (ui->textEdit->toPlainText().toDouble() );
+	b     = (ui->textEdit_2->toPlainText().toDouble() );
+	t     = (ui->textEdit_3->toPlainText().toDouble() );
+	A     = (ui->textEdit_4->toPlainText().toDouble() );
+	U     = (ui->textEdit_5->toPlainText().toDouble() );
+	kx    = (ui->textEdit_6->toPlainText().toDouble() );
+	alpha = (ui->textEdit_7->toPlainText().toDouble() );
+	sigm  = (ui->textEdit_8->toPlainText().toDouble() );
+
+	ui->label_2->setText("a= "+QString::number(a.real()));
+	ui->label_3->setText("b= "+QString::number(b.real()));
+	ui->label_4->setText("t= "+QString::number(t));
+
+	ui->graphicsView->show();
+
+
+
+	masX[0] = a;
+	for (int j = 1; j < Nx; j++)
 	{
-        next[i][0] = A * exp( -(pow((next[i][0]-x0),2)) / (complex(2,0)*(pow(sigm,2)) )) * exp(kx*(next[i][0])*i1);
-    }
+		masX[j] = masX[j-1] + deltax;
+	}
 
-	for(;;)
+	for (int j = 0; j < Nx; j++)
 	{
-		t += Tstep; step++;
-		mScene->clear();
+		complex numerator = -(pow((masX[j]-x0),2.0));
+		complex denominator = (2.0 *(pow(sigm,2.0)));
+		complex nd = numerator / denominator;
+		complex exp1 = exp (nd);
+		complex exp2 = exp(kx*(masX[j])*i1);
+
+        next[j][0] = A * exp1 * exp2;
+		QColor qwe =color_int5(real(next[j][0]));
+
+	}
+	ui->graphicsView->show();
 
 
 
 
-		for (int k = 0; k < Nx; k++)
+
+	for (int l = 0; l<2; l++)
+	{
+
+
+		t += Tstep;
+
+
+		int k1;
+		if (step == 0){
+			k1 = 1;
+		} else {
+			k1 = 0;
+		}
+		step++;
+		for (int k = k1; k < Ny - 1; k++)
 		{
-			for (int j = 0; j < Ny; j++)
+			for (int j = 0; j < Nx; j++)
 			{
 
-
-
-				if ((j==0)||(j==(Ny-1))) {
-					complex t;
-					t =next[j][k] + (Tstep/i1)*(next[j][k]*alpha*pow((abs(next[j][k])),2) + U*next[j][k]);
-					if (t.real() == NAN) {
-						qreal a = 4;
-						a = a + 1;
-					}
-					next[j][k+1] = t;
-				} else {
-					complex t;
-					complex sec = -(secderivative(next[j-1][k], next[j][k], next[j+1][k], deltax));
-					t = next[j][k] + (Tstep/i1)*(sec + next[j][k]*alpha*pow(abs(next[j][k]), 2) + U*next[j][k]);
-					if (t.real() == NAN) {
-						qreal a = 4;
-						a = a + 1;
-					}
-					next[j][k+1] =  t;
+				if ((j == (39))&&(k == (3))) {
+					qreal tmp123;
+					tmp123 += 0;
 				}
 
+				if ((j==0)||(j==(Ny-1))) {
+					complex expr;
+					complex nextjk = next[j][k];
+					complex deli1 = deltat/i1;
+					complex abs_next_jk = (abs(nextjk));
+					complex	pow2 = pow(abs_next_jk,2.0);
+					complex Unext = U*next[j][k];
+					complex Skob = nextjk*alpha*pow2 + Unext;
+
+					expr = nextjk + deli1 * Skob;
+
+					next[j][k+1] = expr;
+				} else {
+					complex expr;
+					complex nextjk = next[j][k];
+					complex deli1 = deltat/i1;
+					complex	pow2 = pow((abs(nextjk)),2.0);
+					complex Unext = U*next[j][k];
+					complex Skob = nextjk*alpha*pow2 + Unext;
 
 
-				/*
 
-				// next[i][j]=(i+j)/200;
-				next[i][j] = cur[i][j]+Tstep*( (cur[i+1][j]-2*cur[i][j]+cur[i-1][j])/(hx*hx) + (cur[i][j+1]-2*cur[i][j]+cur[i][j-1])/(hy*hy) );
+					complex sec = -(secderivative(next[j-1][k], next[j][k], next[j+1][k], deltax));
+					expr = nextjk + deli1*(sec + Skob);
 
+					next[j][k+1] =  expr;
+				}
 
+				if ((j == (Ny - 1))&&(k == (Ny - 2))) {
+					qreal tmp123;
+					tmp123 += 0;
+				}
 
-				//QColor brush_color(i,j,i+j);
-				mScene->addRect(i*4, j*4, 4, 4, QPen(brush_color), QBrush(brush_color));
-				*/
-
-				int qwe =color_int2(real(next[k][j]));
-				QColor brush_color(qwe,qwe,qwe);
-
-				mScene->addRect(cell * j, cell * (Ny - k), cell, cell, QPen(brush_color), QBrush(brush_color));
 			}
 		}
 
-		count++;
-		if (count == 10)
-			printf("Hello world");
-		//printf("next[1][1]= %f", cur[1][1]);
-		for (int x = 0; x < Nx; x++)
-		{
-			for (int y = 0; y < Ny; y++)
-			{
-				cur[x][y] = next[x][y];
-			}
-		}
+		//count++;
+		//if (count == 10)
+		//	printf("Hello world");
+		//for (int x = 0; x < Nx; x++)
+		//{
+		//	for (int y = 0; y < Ny; y++)
+		//	{
+		//		cur[x][y] = next[x][y];
+		//	}
+		//}
 		//bound_cond();
-		if(step % SAVE_STEP)
-		{
+		mScene->clear();
+
+		if (step == 2) {
+			for (int k = 0; k < Ny; k++)
+			{
+				for (int j = 0; j < Nx; j++)
+				{
+					QColor qwe = color_int5(real(next[j][k]));
+					mScene->addRect(cell * j, cell * (Ny - k), cell, cell, QPen(qwe), QBrush(qwe));
+				}
+			}
+		}
+		//ui->label->setText("Итерация: "+QString::number(step));
+		//if(step % SAVE_STEP)
+		//{
 			ui->graphicsView->show();
 			QEventLoop loop;
 			QTimer::singleShot(10, &loop, SLOT(quit()));
 			loop.exec();
-		}
+		//}
+
 	}
+
+
 
 
 	free(cur);
@@ -214,13 +357,60 @@ void MainWindow::on_pushButton_clicked()
 
 complex MainWindow::secderivative(complex a, complex b, complex c, complex delta)
 {
-    complex res = (a- complex(2,0) * b + c)/(delta * delta);
+    complex res = (a- 2.0 * b + c)/(delta * delta);
 	return res;
 }
 
 void MainWindow::on_pushButton_2_clicked()
 {
+	ui->textEdit->clear();
+	ui->textEdit_2->clear();
+	ui->textEdit_3->clear();
+	ui->textEdit_4->clear();
+	ui->textEdit_5->clear();
+	ui->textEdit_6->clear();
+	ui->textEdit_7->clear();
+	ui->textEdit_8->clear();
 
 }
 
 
+
+void MainWindow::on_MainWindow_destroyed()
+{
+    //isOpen = false;
+}
+
+void MainWindow::on_pushButton_3_clicked()
+{
+	ui->textEdit->clear();
+	ui->textEdit_2->clear();
+	ui->textEdit_3->clear();
+	ui->textEdit_4->clear();
+	ui->textEdit_5->clear();
+	ui->textEdit_6->clear();
+	ui->textEdit_7->clear();
+	ui->textEdit_8->clear();
+	ui->label_2->clear();
+	ui->label_3->clear();
+	ui->label_4->clear();
+
+
+
+
+	ui->textEdit->insertPlainText("-40");
+	ui->textEdit_2->insertPlainText("40");
+	ui->textEdit_3->insertPlainText("5");
+	ui->textEdit_4->insertPlainText("1");
+	ui->textEdit_5->insertPlainText("0");
+	ui->textEdit_6->insertPlainText("1");
+	ui->textEdit_7->insertPlainText("0");
+	ui->textEdit_8->insertPlainText("2");
+
+
+	ui->label_2->setText("a= -40");
+	ui->label_3->setText("b= 40");
+	ui->label_4->setText("t= 5");
+
+
+}
